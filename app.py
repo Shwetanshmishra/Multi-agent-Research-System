@@ -1,5 +1,23 @@
+import os
 import streamlit as st
 import time
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Key loader — works both locally (.env) and on Streamlit Cloud (secrets)
+# Must run BEFORE any agent/tool imports so os.environ is populated first
+# ─────────────────────────────────────────────────────────────────────────────
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except Exception:
+    pass
+
+# Streamlit Cloud: push secrets → os.environ so tools.py / agents.py pick them up
+try:
+    for _k, _v in st.secrets.items():
+        os.environ.setdefault(str(_k), str(_v))
+except Exception:
+    pass
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Page config
