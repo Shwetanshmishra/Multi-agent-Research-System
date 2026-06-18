@@ -1,9 +1,10 @@
+<div align="center">
 
 # 🧠 ResearchMind
 
 ### 🚀 Autonomous Multi-Agent AI Research System
 
-*Transform any topic into a comprehensive, publication-quality research report using intelligent AI agents powered by **LangChain**, **LangGraph**, **Mistral AI**, and **Tavily Search**.*
+*Transform any topic into a comprehensive, publication-quality research report using intelligent AI agents powered by **LangChain**, , **Mistral AI**, and **Tavily Search**.*
 
 <br>
 
@@ -240,6 +241,6 @@ https://multi-agent-research-system-jkvrgvui4sypg4t5imtjku.streamlit.app
 
 ### ⭐ Star this repository if you found it useful!
 
-**Built with ❤️ using LangChain • LangGraph • Mistral AI • Streamlit**
+**Built with ❤️ using LangChain •  Mistral AI • Streamlit**
 
 </div>
