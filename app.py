@@ -77,10 +77,24 @@ html, body,
   color: var(--white);
   font-family: var(--font-body);
 }
-[data-testid="stHeader"]    { display: none !important; }
+[data-testid="stHeader"]    {
+  background: transparent !important;
+  height: 2.75rem !important;
+}
 [data-testid="stToolbar"]   { display: none !important; }
 footer                      { display: none !important; }
 #MainMenu                   { display: none !important; }
+
+/* Keep the sidebar open/close arrow visible & themed for the dark UI */
+[data-testid="collapsedControl"],
+[data-testid="stSidebarCollapseButton"] {
+  display: flex !important;
+  color: var(--white) !important;
+}
+[data-testid="collapsedControl"] svg,
+[data-testid="stSidebarCollapseButton"] svg {
+  fill: var(--white) !important;
+}
 
 /* ── Sidebar ── */
 [data-testid="stSidebar"] {
@@ -231,7 +245,7 @@ def _init():
     defs = dict(
         running=False, done=False, error=None,
         search_results="", scraped_content="",
-        report="", feedback="",
+        report="", feedback="", final_report="",
         elapsed=0.0, step=0, history=[],
     )
     for k, v in defs.items():
@@ -249,6 +263,7 @@ STEPS = [
     ("02", "📖", "Reader",  "Reads & extracts content"),
     ("03", "✍", "Writer",  "Synthesises the report"),
     ("04", "🧐", "Critic",  "Evaluates quality"),
+    ("05", "🔁", "Revise",  "Applies critic feedback"),
 ]
 
 with st.sidebar:
@@ -280,7 +295,7 @@ with st.sidebar:
     s = st.session_state.step
     for num, icon, name, desc in STEPS:
         idx = int(num)
-        if s == 5 or s > idx:
+        if s == 6 or s > idx:
             bar_col, badge_bg, badge_col, badge_txt = "#22C55E", "#14532D", "#22C55E", "DONE"
             left_col = "#22C55E"
         elif s == idx:
@@ -316,7 +331,7 @@ with st.sidebar:
 
     # Stats
     runs = len(st.session_state.history)
-    words = len(st.session_state.report.split()) if st.session_state.report else 0
+    words = len(st.session_state.final_report.split()) if st.session_state.final_report else 0
     st.markdown(f"""
     <div style="padding:20px 24px;border-top:1px solid #1E1E26;margin-top:auto;">
       <div style="display:flex;gap:0;border:1px solid #2A2A34;
@@ -448,7 +463,7 @@ def render_status(msg, kind="idle"):
 if st.session_state.running:
     render_status("Pipeline running…", "running")
 elif st.session_state.done:
-    render_status(f"Complete in {st.session_state.elapsed:.1f}s  ·  {len(st.session_state.report.split()):,} words generated", "done")
+    render_status(f"Complete in {st.session_state.elapsed:.1f}s  ·  {len(st.session_state.final_report.split()):,} words generated", "done")
 elif st.session_state.error:
     render_status(f"Error — {st.session_state.error[:120]}", "error")
 else:
@@ -462,7 +477,7 @@ if run:
     if not topic.strip():
         st.warning("Please enter a research topic.")
     else:
-        for k in ("search_results","scraped_content","report","feedback","error"):
+        for k in ("search_results","scraped_content","report","feedback","final_report","error"):
             st.session_state[k] = "" if k != "error" else None
         st.session_state.update(running=True, done=False, step=0, elapsed=0.0)
         st.rerun()
@@ -480,41 +495,28 @@ if st.session_state.running and not st.session_state.done:
 
     t0 = time.time()
 
+    STAGE_UI = {
+        1: ("Step 1 / 5 — Search Agent  ·  querying the web for sources…", 8, "Search Agent is scanning the web…"),
+        2: ("Step 2 / 5 — Reader Agent  ·  reading and extracting content…", 30, "Reader Agent is extracting content from sources…"),
+        3: ("Step 3 / 5 — Writer Agent  ·  composing the research report…", 52, "Writer Agent is composing the report…"),
+        4: ("Step 4 / 5 — Critic Agent  ·  evaluating quality and accuracy…", 74, "Critic Agent is evaluating the report…"),
+        5: ("Step 5 / 5 — Revision Agent  ·  applying critic feedback…", 92, "Revision Agent is refining the report…"),
+    }
+
+    def on_step(step, key, value):
+        st.session_state[key] = value
+        st.session_state.step = step
+        msg, pct, prog_txt = STAGE_UI[step]
+        render_status(msg, "running")
+        set_progress(pct, prog_txt)
+
     try:
-        from agents import run_search_agent, run_reader_agent, writer_chain, critic_chain
-
-        # Step 1 — Search
-        st.session_state.step = 1
-        render_status("Step 1 / 4 — Search Agent  ·  querying the web for sources…", "running")
-        set_progress(8, "Search Agent is scanning the web…")
-
-        st.session_state.search_results = run_search_agent(topic)
-
-        # Step 2 — Reader
-        st.session_state.step = 2
-        render_status("Step 2 / 4 — Reader Agent  ·  reading and extracting content…", "running")
-        set_progress(35, "Reader Agent is extracting content from sources…")
-
-        st.session_state.scraped_content = run_reader_agent(st.session_state.search_results)
-
-        # Step 3 — Writer
-        st.session_state.step = 3
-        render_status("Step 3 / 4 — Writer Agent  ·  composing the research report…", "running")
-        set_progress(62, "Writer Agent is composing the report…")
-
-        research = f"SEARCH RESULTS\n{st.session_state.search_results}\n\nSCRAPED CONTENT\n{st.session_state.scraped_content}"
-        st.session_state.report = writer_chain.invoke({"topic": topic, "research": research})
-
-        # Step 4 — Critic
-        st.session_state.step = 4
-        render_status("Step 4 / 4 — Critic Agent  ·  evaluating quality and accuracy…", "running")
-        set_progress(86, "Critic Agent is evaluating the report…")
-
-        st.session_state.feedback = critic_chain.invoke({"report": st.session_state.report})
+        from pipeline import run_research_pipeline
+        run_research_pipeline(topic, on_step=on_step)
 
         # Done
         st.session_state.elapsed = round(time.time() - t0, 1)
-        st.session_state.step    = 5
+        st.session_state.step    = 6
         st.session_state.done    = True
         st.session_state.running = False
         st.session_state.history.append(topic)
@@ -561,11 +563,12 @@ if st.session_state.done:
     ">Output</div>
     """, unsafe_allow_html=True)
 
-    tab1, tab2, tab3, tab4 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "🔍  Sources",
         "📖  Extracted Content",
-        "✍  Research Report",
+        "✍  Draft Report",
         "🧐  Critic Review",
+        "🔁  Final Report",
     ])
 
     with tab1:
@@ -575,18 +578,7 @@ if st.session_state.done:
         output_panel(st.session_state.scraped_content)
 
     with tab3:
-        c1, c2 = st.columns([6, 1], gap="small")
-        with c1:
-            output_panel(st.session_state.report)
-        with c2:
-            st.markdown('<div style="height:2px"></div>', unsafe_allow_html=True)
-            st.download_button(
-                "⬇ .md",
-                data=st.session_state.report,
-                file_name=f"researchmind_{int(time.time())}.md",
-                mime="text/markdown",
-                use_container_width=True,
-            )
+        output_panel(st.session_state.report)
 
     with tab4:
         # Critic gets a two-column layout: quality pill + content
@@ -604,12 +596,26 @@ if st.session_state.done:
                           margin-bottom:12px;">Quality Gate</div>
               <div style="font-size:40px;margin-bottom:10px;">🧐</div>
               <div style="font-size:12px;color:#52525B;line-height:1.5;">
-                Independent review of accuracy, depth & coherence
+                Feedback feeds the Revision Agent below
               </div>
             </div>
             """, unsafe_allow_html=True)
         with cb:
             output_panel(st.session_state.feedback)
+
+    with tab5:
+        c1, c2 = st.columns([6, 1], gap="small")
+        with c1:
+            output_panel(st.session_state.final_report)
+        with c2:
+            st.markdown('<div style="height:2px"></div>', unsafe_allow_html=True)
+            st.download_button(
+                "⬇ .md",
+                data=st.session_state.final_report,
+                file_name=f"researchmind_{int(time.time())}.md",
+                mime="text/markdown",
+                use_container_width=True,
+            )
 
 else:
     # ── Empty / idle state ────────────────────────────────────────────────────
