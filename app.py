@@ -77,23 +77,34 @@ html, body,
   color: var(--white);
   font-family: var(--font-body);
 }
-[data-testid="stHeader"]    {
-  background: transparent !important;
-  height: 2.75rem !important;
-}
-[data-testid="stToolbar"]   { display: none !important; }
+[data-testid="stHeader"]    { background: transparent !important; }
+[data-testid="stToolbar"]   { background: transparent !important; }
+[data-testid="stAppDeployButton"] { display: none !important; }
 footer                      { display: none !important; }
 #MainMenu                   { display: none !important; }
 
-/* Keep the sidebar open/close arrow visible & themed for the dark UI */
-[data-testid="collapsedControl"],
-[data-testid="stSidebarCollapseButton"] {
-  display: flex !important;
+/* ── Sidebar toggle ── */
+[data-testid="stSidebarCollapsedControl"],
+[data-testid="stSidebarCollapseButton"],
+button[aria-label="Open sidebar"],
+button[aria-label="Close sidebar"] {
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  z-index: 999999 !important;
+}
+[data-testid="stSidebarCollapsedControl"] button,
+[data-testid="stSidebarCollapseButton"] button,
+button[aria-label="Open sidebar"],
+button[aria-label="Close sidebar"] {
   color: var(--white) !important;
 }
-[data-testid="collapsedControl"] svg,
-[data-testid="stSidebarCollapseButton"] svg {
+[data-testid="stSidebarCollapsedControl"] svg,
+[data-testid="stSidebarCollapseButton"] svg,
+button[aria-label="Open sidebar"] svg,
+button[aria-label="Close sidebar"] svg {
   fill: var(--white) !important;
+  stroke: var(--white) !important;
 }
 
 /* ── Sidebar ── */
@@ -279,7 +290,7 @@ with st.sidebar:
         Research<span style="color:#F97316;">Mind</span>
       </div>
       <div style="font-size:12px;color:#52525B;margin-top:8px;">
-        Four agents · One report
+        5-stage research pipeline
       </div>
     </div>
     """, unsafe_allow_html=True)

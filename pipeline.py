@@ -1,4 +1,4 @@
-﻿from agents import run_search_agent, run_reader_agent, writer_chain, critic_chain, revision_chain
+﻿from agents import run_search_agent, run_reader_agent, writer_chain, critic_chain, revision_chain, with_retry
 from rich import print
 
 
@@ -28,17 +28,17 @@ SCRAPED CONTENT
 {state["scraped_content"]}
 """
 
-    state["report"] = emit(3, "report", writer_chain.invoke({
+    state["report"] = emit(3, "report", with_retry(writer_chain.invoke, {
         "topic": topic,
         "research": research,
     }))
 
-    state["feedback"] = emit(4, "feedback", critic_chain.invoke({
+    state["feedback"] = emit(4, "feedback", with_retry(critic_chain.invoke, {
         "research": research,
         "report": state["report"],
     }))
 
-    state["final_report"] = emit(5, "final_report", revision_chain.invoke({
+    state["final_report"] = emit(5, "final_report", with_retry(revision_chain.invoke, {
         "topic": topic,
         "research": research,
         "report": state["report"],

@@ -5,13 +5,14 @@ from tools import web_search, scrape_url
 from dotenv import load_dotenv
 from langchain_mistralai import ChatMistralAI
 import os
+import time
 
 load_dotenv()
 
 # ── Model ─────────────────────────────────────────────────────────────────────
+# temperature 0.2: research writing needs consistency, not creativity
 llm = ChatMistralAI(
-    model="mistral-small-latest",
-    api_key=os.getenv("MISTRAL_API_KEY"),
+    model="mistral-small-2603",
     temperature=0.2,
 )
 
@@ -32,10 +33,23 @@ def extract_text(result: dict) -> str:
     return "".join(parts).strip()
 
 
+# ── Rate-limit retry ──────────────────────────────────────────────────────────
+def with_retry(fn, *args, retries=4, base_delay=8, **kwargs):
+    """Retry on Mistral 429 rate-limit errors with growing backoff."""
+    for attempt in range(retries):
+        try:
+            return fn(*args, **kwargs)
+        except Exception as e:
+            if "429" in str(e) and attempt < retries - 1:
+                time.sleep(base_delay * (attempt + 1))
+                continue
+            raise
+
+
 # ── Agent 1: Search ───────────────────────────────────────────────────────────
 def run_search_agent(topic: str) -> str:
     agent = create_agent(model=llm, tools=[web_search])
-    result = agent.invoke({
+    result = with_retry(agent.invoke, {
         "messages": [("user", f"""
 Search the internet for the topic: {topic}
 
@@ -54,7 +68,7 @@ Use markdown formatting.
 # ── Agent 2: Reader ───────────────────────────────────────────────────────────
 def run_reader_agent(search_results: str) -> str:
     agent = create_agent(model=llm, tools=[scrape_url])
-    result = agent.invoke({
+    result = with_retry(agent.invoke, {
         "messages": [("user", f"""
 Read ALL URLs from the following search results.
 
