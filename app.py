@@ -592,7 +592,6 @@ def output_panel(content: str, mono: bool = False):
       border-radius:8px;padding:28px 32px;
       max-height:560px;overflow-y:auto;
       {font}
-    " class="rm">
     """, unsafe_allow_html=True)
     st.markdown(content)
     st.markdown("</div>", unsafe_allow_html=True)
@@ -608,7 +607,7 @@ if st.session_state.done:
     ">Output</div>
     """, unsafe_allow_html=True)
 
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    tab1, tab2, tab3, tab4 = st.tabs([
         "🔍  Sources",
         "📖  Extracted Content",
         "✍  Draft Report",
@@ -647,19 +646,7 @@ if st.session_state.done:
         with cb:
             output_panel(st.session_state.feedback)
 
-    with tab5:
-        c1, c2 = st.columns([6, 1], gap="small")
-        with c1:
-            output_panel(st.session_state.final_report)
-        with c2:
-            st.markdown('<div style="height:2px"></div>', unsafe_allow_html=True)
-            st.download_button(
-                "⬇ .md",
-                data=st.session_state.final_report,
-                file_name=f"researchmind_{int(time.time())}.md",
-                mime="text/markdown",
-                use_container_width=True,
-            )
+
 
 else:
     # ── Empty / idle state ────────────────────────────────────────────────────
