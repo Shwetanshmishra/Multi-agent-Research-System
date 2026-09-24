@@ -1,6 +1,10 @@
-﻿from agents import build_reader_agent , build_search_agent , writer_chain , critic_chain
+﻿from agents import build_reader_agent, build_search_agent, writer_chain, critic_chain
 
-def run_research_pipeline(topic : str) -> dict:
+
+def run_research_pipeline(topic: str, on_step=None) -> dict:
+    def notify(step, key=None, value=None):
+        if on_step:
+            on_step(step, key, value)
 
     state = {}
 
@@ -9,11 +13,13 @@ def run_research_pipeline(topic : str) -> dict:
     print("step 1 - search agent is working ...")
     print("="*50)
 
+    notify(1)
     search_agent = build_search_agent()
     search_result = search_agent.invoke({
         "messages" : [("user", f"Find recent, reliable and detailed information about: {topic}")]
     })
     state["search_results"] = search_result['messages'][-1].content
+    notify(1, "search_results", state["search_results"])
 
     print("\n search result ",state['search_results'])
 
@@ -22,6 +28,7 @@ def run_research_pipeline(topic : str) -> dict:
     print("step 2 - Reader agent is scraping top resources ...")
     print("="*50)
 
+    notify(2)
     reader_agent = build_reader_agent()
     reader_result = reader_agent.invoke({
         "messages": [("user",
@@ -32,6 +39,7 @@ def run_research_pipeline(topic : str) -> dict:
     })
 
     state['scraped_content'] = reader_result['messages'][-1].content
+    notify(2, "scraped_content", state['scraped_content'])
 
     print("\nscraped content: \n", state['scraped_content'])
 
@@ -46,10 +54,12 @@ def run_research_pipeline(topic : str) -> dict:
         f"DETAILED SCRAPED CONTENT : \n {state['scraped_content']}"
     )
 
+    notify(3)
     state["report"] = writer_chain.invoke({
         "topic" : topic,
         "research" : research_combined
     })
+    notify(3, "report", state["report"])
 
     print("\n Final Report\n",state['report'])
 
@@ -59,9 +69,11 @@ def run_research_pipeline(topic : str) -> dict:
     print("step 4 - critic is reviewing the report ")
     print("="*50)
 
+    notify(4)
     state["feedback"] = critic_chain.invoke({
         "report":state['report']
     })
+    notify(4, "feedback", state["feedback"])
 
     print("\n critic report \n", state['feedback'])
 

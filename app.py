@@ -257,7 +257,7 @@ def _init():
         running=False, done=False, error=None,
         search_results="", scraped_content="",
         report="", feedback="", final_report="",
-        elapsed=0.0, step=0, history=[],
+        elapsed=0.0, step=0, current_agent="", history=[],
     )
     for k, v in defs.items():
         if k not in st.session_state:
@@ -274,7 +274,6 @@ STEPS = [
     ("02", "📖", "Reader",  "Reads & extracts content"),
     ("03", "✍", "Writer",  "Synthesises the report"),
     ("04", "🧐", "Critic",  "Evaluates quality"),
-    ("05", "🔁", "Revise",  "Applies critic feedback"),
 ]
 
 with st.sidebar:
@@ -290,7 +289,7 @@ with st.sidebar:
         Research<span style="color:#F97316;">Mind</span>
       </div>
       <div style="font-size:12px;color:#52525B;margin-top:8px;">
-        5-stage research pipeline
+        4-stage research pipeline
       </div>
     </div>
     """, unsafe_allow_html=True)
@@ -303,42 +302,55 @@ with st.sidebar:
                   margin-bottom:14px;">Pipeline Stages</div>
     """, unsafe_allow_html=True)
 
-    s = st.session_state.step
-    for num, icon, name, desc in STEPS:
+    def render_stage_list(step):
+      stage_markup = """
+      <div style="padding:20px 24px 8px;">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;
+              color:#3F3F46;letter-spacing:.15em;text-transform:uppercase;
+              margin-bottom:14px;">Pipeline Stages</div>
+      """
+      for num, icon, name, desc in STEPS:
         idx = int(num)
-        if s == 6 or s > idx:
-            bar_col, badge_bg, badge_col, badge_txt = "#22C55E", "#14532D", "#22C55E", "DONE"
-            left_col = "#22C55E"
-        elif s == idx:
-            bar_col, badge_bg, badge_col, badge_txt = "#F97316", "#7C3B0E", "#F97316", "LIVE"
-            left_col = "#F97316"
+        if step == 6 or step > idx:
+          left_col, marker_col, marker, badge_bg, badge_col, badge_txt = (
+            "#22C55E", "#22C55E", "✓", "#14532D", "#22C55E", "DONE"
+          )
+        elif step == idx:
+          left_col, marker_col, marker, badge_bg, badge_col, badge_txt = (
+            "#F97316", "#F97316", "●", "#7C3B0E", "#F97316", "LIVE"
+          )
         else:
-            bar_col, badge_bg, badge_col, badge_txt = "#2A2A34", "#18181C", "#52525B", "IDLE"
-            left_col = "#2A2A34"
+          left_col, marker_col, marker, badge_bg, badge_col, badge_txt = (
+            "#2A2A34", "#52525B", "○", "#18181C", "#52525B", "IDLE"
+          )
 
-        st.markdown(f"""
+        stage_markup += f"""
         <div style="display:flex;align-items:center;gap:12px;
-                    padding:12px 0;border-bottom:1px solid #1E1E26;">
+              padding:12px 0;border-bottom:1px solid #1E1E26;">
           <div style="width:3px;height:38px;background:{left_col};
-                      border-radius:2px;flex-shrink:0;"></div>
+                border-radius:2px;flex-shrink:0;"></div>
           <div style="font-family:'Barlow Condensed',sans-serif;
-                      font-size:13px;font-weight:800;color:#3F3F46;
-                      flex-shrink:0;">{num}</div>
+                font-size:13px;font-weight:800;color:#3F3F46;
+                flex-shrink:0;">{num}</div>
           <div style="flex:1;min-width:0;">
-            <div style="font-size:13px;font-weight:700;color:#F4F4F5;">
-              {icon} {name}
-            </div>
-            <div style="font-size:11px;color:#52525B;margin-top:2px;">{desc}</div>
+          <div style="font-size:13px;font-weight:700;color:#F4F4F5;">
+            <span style="color:{marker_col};">{marker}</span> {icon} {name}
+          </div>
+          <div style="font-size:11px;color:#52525B;margin-top:2px;">{desc}</div>
           </div>
           <div style="background:{badge_bg};color:{badge_col};
-                      font-family:'IBM Plex Mono',monospace;
-                      font-size:9px;font-weight:500;
-                      padding:3px 7px;border-radius:99px;
-                      flex-shrink:0;">{badge_txt}</div>
+                font-family:'IBM Plex Mono',monospace;
+                font-size:9px;font-weight:500;
+                padding:3px 7px;border-radius:99px;
+                flex-shrink:0;">{badge_txt}</div>
         </div>
-        """, unsafe_allow_html=True)
+        """
+      return stage_markup + "</div>"
 
-    st.markdown("</div>", unsafe_allow_html=True)
+    stage_placeholder = st.empty()
+    stage_placeholder.markdown(
+      render_stage_list(st.session_state.step), unsafe_allow_html=True
+    )
 
     # Stats
     runs = len(st.session_state.history)
@@ -472,7 +484,8 @@ def render_status(msg, kind="idle"):
     """, unsafe_allow_html=True)
 
 if st.session_state.running:
-    render_status("Pipeline running…", "running")
+  active_name = st.session_state.current_agent or "Agent"
+  render_status(f"{active_name} agent is working…", "running")
 elif st.session_state.done:
     render_status(f"Complete in {st.session_state.elapsed:.1f}s  ·  {len(st.session_state.final_report.split()):,} words generated", "done")
 elif st.session_state.error:
@@ -490,7 +503,9 @@ if run:
     else:
         for k in ("search_results","scraped_content","report","feedback","final_report","error"):
             st.session_state[k] = "" if k != "error" else None
-        st.session_state.update(running=True, done=False, step=0, elapsed=0.0)
+        st.session_state.update(
+          running=True, done=False, step=0, current_agent="", elapsed=0.0
+        )
         st.rerun()
 
 
@@ -510,24 +525,43 @@ if st.session_state.running and not st.session_state.done:
         1: ("Step 1 / 5 — Search Agent  ·  querying the web for sources…", 8, "Search Agent is scanning the web…"),
         2: ("Step 2 / 5 — Reader Agent  ·  reading and extracting content…", 30, "Reader Agent is extracting content from sources…"),
         3: ("Step 3 / 5 — Writer Agent  ·  composing the research report…", 52, "Writer Agent is composing the report…"),
-        4: ("Step 4 / 5 — Critic Agent  ·  evaluating quality and accuracy…", 74, "Critic Agent is evaluating the report…"),
-        5: ("Step 5 / 5 — Revision Agent  ·  applying critic feedback…", 92, "Revision Agent is refining the report…"),
+        4: ("Step 4 / 5 — Critic Agent  ·  evaluating quality and accuracy…", 74, "Critic Agent is evaluating the report…")
     }
 
+    AGENT_NAMES = {1: "Search", 2: "Reader", 3: "Writer", 4: "Critic"}
+
     def on_step(step, key, value):
+      if key:
         st.session_state[key] = value
-        st.session_state.step = step
+      st.session_state.current_agent = AGENT_NAMES[step]
+      display_step = step + 1 if key else step
+      st.session_state.step = display_step
+      stage_placeholder.markdown(
+        render_stage_list(display_step), unsafe_allow_html=True
+      )
+      if key:
+        render_status(f"{AGENT_NAMES[step]} agent completed", "done")
+      else:
         msg, pct, prog_txt = STAGE_UI[step]
         render_status(msg, "running")
         set_progress(pct, prog_txt)
 
     try:
         from pipeline import run_research_pipeline
-        run_research_pipeline(topic, on_step=on_step)
+        pipeline_state = run_research_pipeline(topic, on_step=on_step)
+        for key in ("search_results", "scraped_content", "report", "feedback"):
+            st.session_state[key] = pipeline_state.get(key, "")
+        st.session_state.final_report = pipeline_state.get(
+            "final_report", pipeline_state.get("report", "")
+        )
+        st.session_state.current_agent = ""
 
         # Done
         st.session_state.elapsed = round(time.time() - t0, 1)
         st.session_state.step    = 6
+        stage_placeholder.markdown(
+          render_stage_list(6), unsafe_allow_html=True
+        )
         st.session_state.done    = True
         st.session_state.running = False
         st.session_state.history.append(topic)
@@ -578,8 +612,7 @@ if st.session_state.done:
         "🔍  Sources",
         "📖  Extracted Content",
         "✍  Draft Report",
-        "🧐  Critic Review",
-        "🔁  Final Report",
+        "🧐  Critic Review"
     ])
 
     with tab1:

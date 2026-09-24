@@ -13,7 +13,7 @@
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge\&logo=python\&logoColor=white)](https://python.org)
 [![LangChain](https://img.shields.io/badge/LangChain-Agentic-1C3C3C?style=for-the-badge)](https://langchain.com)
 [![LangGraph](https://img.shields.io/badge/LangGraph-Orchestration-6C63FF?style=for-the-badge)](https://langchain-ai.github.io/langgraph/)
-[![Mistral AI](https://img.shields.io/badge/Mistral-AI-FF7000?style=for-the-badge)](https://mistral.ai)
+[![Groq AI](https://img.shields.io/badge/Groq-AI-FF7000?style=for-the-badge)](https://Groq.ai)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
 ### 🔍 Search • 📖 Read • ✍️ Write • 🧐 Critique
@@ -143,7 +143,7 @@ pip install -r requirements.txt
 ## Create `.env`
 
 ```env
-MISTRAL_API_KEY=your_mistral_api_key
+GROQ_API_KEY=your_groq_api_key
 
 TAVILY_API_KEY=your_tavily_api_key
 ```
@@ -169,7 +169,7 @@ run.bat
 3. Add your Secrets
 
 ```toml
-MISTRAL_API_KEY="your_mistral_api_key"
+GROQ_API_KEY="your_groq_api_key"
 
 TAVILY_API_KEY="your_tavily_api_key"
 ```
@@ -241,6 +241,6 @@ https://multi-agent-research-system-jkvrgvui4sypg4t5imtjku.streamlit.app
 
 ### ⭐ Star this repository if you found it useful!
 
-**Built with ❤️ using LangChain •  Mistral AI • Streamlit**
+**Built with ❤️ using LangChain •  GROQ AI • Streamlit**
 
 </div>
